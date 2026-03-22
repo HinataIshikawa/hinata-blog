@@ -1,0 +1,35 @@
+name: Blog Generator
+
+on:
+  schedule:
+    - cron: '0 11 * * *'   # 日本時間 20:00
+    - cron: '0 12 * * *'   # 日本時間 21:00
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install anthropic duckduckgo-search
+
+      - name: Generate article
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python generate_article.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "Hinata Blog Bot"
+          git config user.email "bot@hinata-blog"
+          git add -A
+          git diff --staged --quiet || git commit -m "Add article $(date '+%Y-%m-%d %H:%M')"
+          git push
