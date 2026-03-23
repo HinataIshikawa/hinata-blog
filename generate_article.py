@@ -90,6 +90,15 @@ def generate_article(product_name, link, target, score=None):
         }]
     )
     content = message.content[0].text
+    
+    # Remove Markdown code block markers if present
+    if content.startswith('```html'):
+        content = content[7:]  # Remove ```html
+    if content.startswith('```'):
+        content = content[3:]  # Remove ```
+    if content.endswith('```'):
+        content = content[:-3]  # Remove trailing ```
+    
     # Remove article tags if present
     content = content.replace('<article>', '').replace('</article>', '')
     content = content.strip()
