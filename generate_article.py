@@ -84,12 +84,16 @@ def generate_article(product_name, link, target, score=None):
 - SEOを意識したh1,h2タグを使う
 - 商品の特徴を3〜5個箇条書きで書く
 - 最後に必ずアフィリエイトリンクを含むボタンを入れる
-- <article>タグで全体を囲む
-- bodyタグやhtmlタグは不要、articleの中身だけ出力
-- リンクは必ず {link} を使う"""
+- bodyタグやhtmlタグは不要、h1から始まる本文だけ出力
+- リンクは必ず {link} を使う
+- ボタンは以下の形式で: <a href="{link}" style="display: inline-block; padding: 15px 40px; background-color: #FF9900; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">Amazonでチェック</a>"""
         }]
     )
-    return message.content[0].text
+    content = message.content[0].text
+    # Remove article tags if present
+    content = content.replace('<article>', '').replace('</article>', '')
+    content = content.strip()
+    return content
 
 def generate_description(product_name, category):
     """記事のdescriptionを生成（SEO用）"""
