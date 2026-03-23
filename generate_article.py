@@ -4,9 +4,11 @@ import os
 import sys
 from datetime import date, datetime
 from duckduckgo_search import DDGS
+from urllib.parse import quote
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 CSV_FILE = "products.csv"
+BLOG_URL = "https://hinataishikawa.github.io/hinata-blog"
 
 def get_product():
     if not os.path.exists(CSV_FILE):
@@ -89,13 +91,58 @@ def generate_article(product_name, link, target, score=None):
     )
     return message.content[0].text
 
-def build_html(product_name, article_content, category):
+def generate_description(product_name, category):
+    """記事のdescriptionを生成（SEO用）"""
+    descriptions = {
+        "ガジェット": f"{product_name}の特徴、レビュー、スペックを詳しく解説。Amazonアフィリエイト対応。",
+        "家電": f"{product_name}の最新情報、価格、機能を比較。Amazonで購入できます。",
+        "ファッション": f"{product_name}のおすすめコーディネートと購入ガイド。トレンド情報も掲載。",
+        "美容": f"{product_name}の効果、使い方、口コミをまとめました。Amazonで今すぐ購入。",
+        "生活用品": f"{product_name}で生活がもっと快適に。特徴と選び方を解説します。",
+    }
+    return descriptions.get(category, f"{product_name}のおすすめ情報をお届け。Amazonアフィリエイト対応。")
+
+def build_html(product_name, article_content, category, filename):
+    """メタタグ・OGP・Twitter Cardを含むHTMLを生成"""
     today = date.today().strftime("%Y年%m月%d日")
+    description = generate_description(product_name, category)
+    article_url = f"{BLOG_URL}/articles/{filename}"
+    
+    # OGP用の画像（デフォルト）
+    og_image = f"{BLOG_URL}/og-image.jpg"
+    
     return f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{description}">
+    <meta name="keywords" content="{product_name}, {category}, Amazon, アフィリエイト, レビュー">
+    <meta name="author" content="Hinata">
+    
+    <!-- OGP (Open Graph Protocol) -->
+    <meta property="og:title" content="{product_name} レビュー・特徴まとめ">
+    <meta property="og:description" content="{description}">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="{article_url}">
+    <meta property="og:image" content="{og_image}">
+    <meta property="og:site_name" content="Hinataのおすすめ商品ブログ">
+    <meta property="og:locale" content="ja_JP">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{product_name} レビュー・特徴まとめ">
+    <meta name="twitter:description" content="{description}">
+    <meta name="twitter:image" content="{og_image}">
+    
+    <!-- 記事のメタデータ -->
+    <meta property="article:published_time" content="{date.today().isoformat()}">
+    <meta property="article:author" content="Hinata">
+    <meta property="article:section" content="{category}">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="{article_url}">
+    
     <title>{product_name} レビュー・特徴まとめ</title>
     <style>
         body {{ font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.8; }}
@@ -140,6 +187,22 @@ def update_index(articles_dir):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="大学生ドラマーのHinataが、Amazon厳選商品を毎日紹介するアフィリエイトブログです。ガジェット、家電、ファッション、美容など幅広いカテゴリの商品をレビューしています。">
+    <meta name="keywords" content="アフィリエイト, Amazon, 商品レビュー, ガジェット, 家電, ファッション, 美容">
+    
+    <!-- OGP -->
+    <meta property="og:title" content="Hinataのおすすめ商品ブログ">
+    <meta property="og:description" content="Amazon厳選商品を毎日紹介しています！">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{BLOG_URL}/">
+    <meta property="og:site_name" content="Hinataのおすすめ商品ブログ">
+    <meta property="og:locale" content="ja_JP">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Hinataのおすすめ商品ブログ">
+    <meta name="twitter:description" content="Amazon厳選商品を毎日紹介しています！">
+    
     <title>Hinataのアフィリエイトブログ</title>
     <style>
         body {{ font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }}
@@ -163,6 +226,49 @@ def update_index(articles_dir):
         f.write(index_content)
     print("index.html を更新しました")
 
+def generate_sitemap(articles_dir):
+    """sitemap.xmlを生成（SEO用）"""
+    files = sorted(
+        [f for f in os.listdir(articles_dir) if f.endswith(".html")],
+        reverse=True
+    )
+    
+    sitemap_urls = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>{BLOG_URL}/</loc>
+        <lastmod>{date.today().isoformat()}</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
+"""
+    
+    for fname in files:
+        # ファイル名から日付を取得
+        parts = fname.replace(".html", "").split("-", 3)
+        if len(parts) >= 3:
+            try:
+                file_date = f"{parts[0]}-{parts[1]}-{parts[2]}"
+            except:
+                file_date = date.today().isoformat()
+        else:
+            file_date = date.today().isoformat()
+        
+        article_url = f"{BLOG_URL}/articles/{fname}"
+        sitemap_urls += f"""    <url>
+        <loc>{article_url}</loc>
+        <lastmod>{file_date}</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+"""
+    
+    sitemap_urls += """</urlset>"""
+    
+    with open("sitemap.xml", "w", encoding="utf-8") as f:
+        f.write(sitemap_urls)
+    print(f"sitemap.xml を生成しました（{len(files)}件の記事）")
+
 def main():
     product = get_product()
     name = product["商品名"]
@@ -174,19 +280,21 @@ def main():
 
     article_content = generate_article(name, link, target, score)
     category = get_category(name)
-    html = build_html(name, article_content, category)
-
+    
     # articlesフォルダに保存
     os.makedirs("articles", exist_ok=True)
     today_str = date.today().strftime("%Y-%m-%d")
     safe_name = name.replace(" ", "-").replace("/", "-")[:30]
-    filename = f"articles/{today_str}-{safe_name}.html"
+    filename = f"{today_str}-{safe_name}.html"
+    
+    html = build_html(name, article_content, category, filename)
 
-    with open(filename, "w", encoding="utf-8") as f:
+    with open(f"articles/{filename}", "w", encoding="utf-8") as f:
         f.write(html)
-    print(f"保存: {filename}")
+    print(f"保存: articles/{filename}")
 
     update_index("articles")
+    generate_sitemap("articles")
 
 if __name__ == "__main__":
     main()
