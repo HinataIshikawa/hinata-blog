@@ -2,9 +2,15 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
         <loc>https://hinataishikawa.github.io/hinata-blog/</loc>
-        <lastmod>2026-04-22</lastmod>
+        <lastmod>2026-04-23</lastmod>
         <changefreq>daily</changefreq>
         <priority>1.0</priority>
+    </url>
+    <url>
+        <loc>https://hinataishikawa.github.io/hinata-blog/articles/2026-04-23-サーモスの真空断熱タンブラー.html</loc>
+        <lastmod>2026-04-23</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
     </url>
     <url>
         <loc>https://hinataishikawa.github.io/hinata-blog/articles/2026-04-22-Anker-USB-C-7in1ハブ.html</loc>
